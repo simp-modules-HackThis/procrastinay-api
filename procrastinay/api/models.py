@@ -21,6 +21,7 @@ class Guild(models.Model):
 class User(AbstractUser):
     user_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     guilds = models.ManyToManyField(Guild)
+    class_name = models.CharField(max_length=50)
 
 
 class Task(models.Model):
@@ -28,6 +29,8 @@ class Task(models.Model):
     title = models.CharField(max_length=200)
     info = models.TextField()
     completed = models.BooleanField(default=False)
+    minutes = models.IntegerField(null=True, blank=True, default=None)
+    deadline = models.DateTimeField(null=True, blank=True, default=None)
 
 
 class UserTask(Task):
@@ -36,3 +39,4 @@ class UserTask(Task):
 
 class GuildTask(Task):
     owner = models.ForeignKey(Guild, on_delete=models.CASCADE)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)

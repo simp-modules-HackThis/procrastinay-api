@@ -25,5 +25,6 @@ urlpatterns = [
     path('users/<uuid:user_id>/', views.user_info),
     path('guilds/<uuid:guild_id>/', views.guild_info),
     path('guilds/<uuid:guild_id>/tasks/', views.guild_tasks),
-    path('login/', views.login)
+    path('login/', views.login),
+    path('classes/', views.classes)
 ]

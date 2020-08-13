@@ -1,4 +1,5 @@
 from .models import *
+from django.utils.text import slugify
 from functools import wraps
 from django.http import JsonResponse, HttpRequest, HttpResponse
 import json
@@ -10,7 +11,7 @@ def protect_guild(view_func):
         if request.user.is_authenticated:
             guild = request.user.guilds.get(guild_id=guild_id)
             if guild != None:
-                return view_func(request, guild, *args, **kwargs)
+                return view_func(request, request.user, guild, *args, **kwargs)
         return HttpResponse(status=403)
     return _protected
 
@@ -19,7 +20,7 @@ def protected(view_func):
     @wraps(view_func)
     def _protected(request, *args, **kwargs):
         if request.user.is_authenticated:
-            return view_func(request, *args, **kwargs)
+            return view_func(request, request.user, *args, **kwargs)
         return HttpResponse(status=403)
     return _protected
 
@@ -34,11 +35,16 @@ def json_guild(guild: Guild):
 
 
 def json_task(task: Task):
-    return {
+    val = {
         'id': task.task_id,
         'title': task.title,
         'info': task.info,
+        'time': task.minutes,
+        'deadline': task.deadline,
     }
+    if isinstance(task, GuildTask):
+        val['creator'] = task.creator
+    return val
 
 
 def json_user(user: User):
@@ -46,6 +52,7 @@ def json_user(user: User):
         'id': user.user_id,
         'email': user.email,
         'join': user.date_joined,
+        'class': user.class_name,
         'guilds': list(user.guilds.values_list('guild_id', flat=True)),
         'tasks': [json_task(task) for task in UserTask.objects.filter(owner=user)],
         'first_name': user.first_name,
@@ -58,3 +65,11 @@ def request_data(request: HttpRequest):
         return json.loads(request.body)
     except Exception:
         return {}
+
+
+def class_dict(pretty, description, name=None):
+    return {
+        'pretty': pretty,
+        'name': name or slugify(pretty),
+        'description': description
+    }

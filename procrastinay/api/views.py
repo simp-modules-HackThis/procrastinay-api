@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.db import transaction
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login as django_login
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.forms.models import model_to_dict
 from django.views.generic import View
@@ -10,7 +10,7 @@ from importlib import import_module
 from django.contrib.sessions.middleware import SessionMiddleware
 
 
-def login(self, request: HttpRequest):
+def login(request: HttpRequest):
     data = request_data(request)
     username = data.get('username', None)
     email = data.get('email', None)
@@ -20,7 +20,7 @@ def login(self, request: HttpRequest):
     user = authenticate(request, username=username, password=password)
     if user != None:
         # if auth successful then login and we're done
-        login(request, user)
+        django_login(request, user)
     elif request.method == 'POST':  # if we want to create account do it
         # email = None
         try:
@@ -38,47 +38,60 @@ def login(self, request: HttpRequest):
 
 
 @protected
-def me(request):
-    return JsonResponse(json_user(request.user))
+def me(request, user):
+    return JsonResponse(json_user(user))
 
 
 @protected
-def me_guilds(request: HttpRequest):
+def me_guilds(request: HttpRequest, user):
     if request.method == 'POST':
         data = request_data(request)
         name = data.get('name', None)
         with transaction.atomic():
             guild = Guild(name=name or '')
             guild.save()
-            request.user.guilds.add(guild)
+            user.guilds.add(guild)
     return JsonResponse({
-        'guilds': [json_guild(guild) for guild in request.user.guilds.all()]
+        'guilds': [json_guild(guild) for guild in user.guilds.all()]
     })
 
 
 @protected
-def me_tasks(request: HttpRequest):
+def me_tasks(request: HttpRequest, user):
     if request.method == 'POST':
         data = request_data(request)
         title = data.get('title', None)
         info = data.get('info', None)
+        minutes = data.get('time', None)
+        deadline = data.get('deadline', None)
         with transaction.atomic():
-            UserTask(title=title or '', info=info or '',
-                     owner=request.user).save()
+            UserTask(title=title or '',
+                      info=info or '',
+                      minutes=minutes,
+                      deadline=deadline,
+                      owner=user).save()
+
 
     return JsonResponse({
-        'tasks': [json_task(task) for task in UserTask.objects.filter(owner=request.user).all()]
+        'tasks': [json_task(task) for task in UserTask.objects.filter(owner=user).all()]
     })
 
 
 @protect_guild
-def guild_tasks(request: HttpRequest, guild):
+def guild_tasks(request: HttpRequest, user, guild):
     if request.method == 'POST':
         data = request_data(request)
         title = data.get('title', None)
         info = data.get('info', None)
+        minutes = data.get('time', None)
+        deadline = data.get('deadline', None)
         with transaction.atomic():
-            GuildTask(title=title or '', info=info or '', owner=guild).save()
+            GuildTask(title=title or '',
+                      info=info or '',
+                      minutes=minutes,
+                      deadline=deadline,
+                      creator=user,
+                      owner=guild).save()
 
     return JsonResponse({
         'tasks': [json_task(task) for task in GuildTask.objects.filter(owner=guild).all()]
@@ -86,11 +99,22 @@ def guild_tasks(request: HttpRequest, guild):
 
 
 @protected
-def guild_info(request: HttpRequest, guild_id):
+def guild_info(request: HttpRequest, _user, guild_id):
     # TODO
     return JsonResponse(json_guild(Guild.objects.get(guild_id=guild_id)))
 
 
 @protected
-def user_info(request: HttpRequest, user_id):
+def user_info(request: HttpRequest, _user, user_id):
     return JsonResponse(json_user(User.objects.get(user_id=user_id)))
+
+
+def classes(request: HttpRequest):
+    return JsonResponse({
+        'classes': [
+            class_dict('Ranger', 'Ranger class description'),
+            class_dict('Paladin', 'Paladin class description'),
+            class_dict('Priest', 'Priest class description'),
+            class_dict('Berserker', 'Berserker class description')
+        ]
+    })
