@@ -34,7 +34,7 @@ def login(request: HttpRequest):
     request.session.save()  # again, need to save session to generate token
     json = json_user(user)
     json['token'] = request.session.session_key
-    return JsonResponse(json)
+    return JsonResponse(json, status=201)
 
 
 @protected
@@ -53,7 +53,7 @@ def me_guilds(request: HttpRequest, user):
             user.guilds.add(guild)
     return JsonResponse({
         'guilds': [json_guild(guild) for guild in user.guilds.all()]
-    })
+    }, status=201 if request.method == 'POST' else 200)
 
 
 @protected
@@ -74,7 +74,7 @@ def me_tasks(request: HttpRequest, user):
 
     return JsonResponse({
         'tasks': [json_task(task) for task in UserTask.objects.filter(owner=user).all()]
-    })
+    }, 201 if request.method == 'POST' else 200)
 
 
 @protect_guild
@@ -95,7 +95,7 @@ def guild_tasks(request: HttpRequest, user, guild):
 
     return JsonResponse({
         'tasks': [json_task(task) for task in GuildTask.objects.filter(owner=guild).all()]
-    })
+    }, 201 if request.method == 'POST' else 200)
 
 
 @protected
