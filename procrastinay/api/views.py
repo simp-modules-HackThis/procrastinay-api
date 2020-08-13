@@ -13,6 +13,7 @@ from django.contrib.sessions.middleware import SessionMiddleware
 def login(self, request: HttpRequest):
     data = request_data(request)
     username = data.get('username', None)
+    email = data.get('email', None)
     password = data.get('password', None)
 
     # try to authenticate
@@ -24,7 +25,7 @@ def login(self, request: HttpRequest):
         # email = None
         try:
             user = User.objects.create_user(
-                username, None, password, first_name=username)
+                username, email, password, first_name=username)
         except Exception as e:  # Error in create_user, usually a common username
             return JsonResponse({'error': 'An error occured while creating the account.'}, status=400)
     else:  # invalid user/pass
