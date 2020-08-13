@@ -1,37 +1,95 @@
 from django.shortcuts import render
-from django.contrib.auth import authenticate
-from django.http import JsonResponse, HttpRequest
+from django.db import transaction
+from django.contrib.auth import authenticate, login
+from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.forms.models import model_to_dict
 from django.views.generic import View
 from .models import User
-import json
+from .utils import *
+from importlib import import_module
+from django.contrib.sessions.middleware import SessionMiddleware
 
 
-def user_to_json(user: HttpRequest):
-    return {
-        'id': user.user_id,
-        'email': user.email,
-        'join': user.date_joined,
-        'guilds': [group.id for group in user.guilds.all()]
-    }
+def login(self, request: HttpRequest):
+    data = request_data(request)
+    username = data.get('username', None)
+    password = data.get('password', None)
+
+    # try to authenticate
+    user = authenticate(request, username=username, password=password)
+    if user != None:
+        # if auth successful then login and we're done
+        login(request, user)
+    elif request.method == 'POST':  # if we want to create account do it
+        # email = None
+        try:
+            user = User.objects.create_user(
+                username, None, password, first_name=username)
+        except Exception as e:  # Error in create_user, usually a common username
+            return JsonResponse({'error': 'An error occured while creating the account.'}, status=400)
+    else:  # invalid user/pass
+        return JsonResponse({'error': 'Invalid username or password.'}, status=400)
+
+    request.session.save()  # again, need to save session to generate token
+    json = json_user(user)
+    json['token'] = request.session.session_key
+    return JsonResponse(json)
 
 
+@protected
 def me(request):
-    user = authenticate(username='matas', password='hi')
-    return JsonResponse(user_to_json(user))
+    return JsonResponse(json_user(request.user))
 
 
-def user_profile(request: HttpRequest, user_id):
-    user = User.objects.get(user_id=user_id)
-    return JsonResponse(user_to_json(user))
+@protected
+def me_guilds(request: HttpRequest):
+    if request.method == 'POST':
+        data = request_data(request)
+        name = data.get('name', None)
+        with transaction.atomic():
+            guild = Guild(name=name or '')
+            guild.save()
+            request.user.guilds.add(guild)
+    return JsonResponse({
+        'guilds': [json_guild(guild) for guild in request.user.guilds.all()]
+    })
 
 
-def create(request: HttpRequest) -> User:
+@protected
+def me_tasks(request: HttpRequest):
+    if request.method == 'POST':
+        data = request_data(request)
+        title = data.get('title', None)
+        info = data.get('info', None)
+        with transaction.atomic():
+            UserTask(title=title or '', info=info or '',
+                     owner=request.user).save()
 
-    data = json.loads(request.body or '{}')
-    name = data['username']
-    password = data['password']
+    return JsonResponse({
+        'tasks': [json_task(task) for task in UserTask.objects.filter(owner=request.user).all()]
+    })
 
-    # email = None
-    user = User.objects.create_user(name, None, password, first_name=name)
-    return JsonResponse({'success': True, 'id': user.user_id})
+
+@protect_guild
+def guild_tasks(request: HttpRequest, guild):
+    if request.method == 'POST':
+        data = request_data(request)
+        title = data.get('title', None)
+        info = data.get('info', None)
+        with transaction.atomic():
+            GuildTask(title=title or '', info=info or '', owner=guild).save()
+
+    return JsonResponse({
+        'tasks': [json_task(task) for task in GuildTask.objects.filter(owner=guild).all()]
+    })
+
+
+@protected
+def guild_info(request: HttpRequest, guild_id):
+    # TODO
+    return JsonResponse(json_guild(Guild.objects.get(guild_id=guild_id)))
+
+
+@protected
+def user_info(request: HttpRequest, user_id):
+    return JsonResponse(json_user(User.objects.get(user_id=user_id)))

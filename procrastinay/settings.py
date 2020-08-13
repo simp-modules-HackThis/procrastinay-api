@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '0qii-@3f$+e-w(1b@peikjzc7*khhy+m+x($!r)fong%=kln0g'
+SECRET_KEY = '5crb_=@as15*6h2f@%e0uc21li5&3tamdgh+ty6i0#l2((@oet'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -30,9 +30,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'procrastinay.api.SessionMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -65,7 +66,7 @@ WSGI_APPLICATION = 'procrastinay.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': str(BASE_DIR / 'db.sqlite3'),
     }
 }
 
@@ -109,5 +110,3 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 AUTH_USER_MODEL = 'api.User'
-
-AUTHENTICATION_BACKENDS = ['api.TokenBackend']

@@ -15,11 +15,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .api import views
+from procrastinay.api import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('profiles/<uuid:user_id>/', views.user_profile),
-    path('profiles/me/', views.me),
-    path('create/', views.create)
+    path('users/me/', views.me),
+    path('users/me/tasks/', views.me_tasks),
+    path('users/me/guilds/', views.me_guilds),
+    path('users/<uuid:user_id>/', views.user_info),
+    path('guilds/<uuid:guild_id>/', views.guild_info),
+    path('guilds/<uuid:guild_id>/tasks/', views.guild_tasks),
+    path('login/', views.login)
 ]
