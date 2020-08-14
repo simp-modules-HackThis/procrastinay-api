@@ -7,21 +7,23 @@ class Guild(models.Model):
     guild_id = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=40)
-
-# brings in
-#
-# username
-# password
-# email
-# first_name
-# last_name
-# + more
+    dictator = models.ForeignKey('User', on_delete=models.CASCADE)
 
 
 class User(AbstractUser):
+    # brings in
+    #
+    # username
+    # password
+    # email
+    # first_name
+    # last_name
+    # + more
     user_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     guilds = models.ManyToManyField(Guild)
-    class_name = models.CharField(max_length=50, null=True, blank=True, default=None)
+    invites = models.ManyToManyField(Guild, related_name='invites')
+    class_name = models.CharField(
+        max_length=50, null=True, blank=True, default=None)
 
 
 class Task(models.Model):

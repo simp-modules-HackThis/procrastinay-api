@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.db import transaction
 from django.contrib.auth import authenticate, login as django_login
 from django.http import JsonResponse, HttpRequest, HttpResponse
@@ -38,7 +38,7 @@ def login(request: HttpRequest):
     request.session.save()  # again, need to save session to generate token
     json = json_user(user)
     json['token'] = request.session.session_key
-    return JsonResponse(json, status=201)
+    return JsonResponse(json, status=201 if request.method == 'POST' else 200)
 
 
 @protected
@@ -47,12 +47,25 @@ def me(request, user):
 
 
 @protected
-def me_guilds(request: HttpRequest, user):
+def me_invites(request, user):
     if request.method == 'POST':
         data = request_data(request)
-        name = data.get('name', None)
+        guild_id = data.get('id', None)
         with transaction.atomic():
-            guild = Guild(name=name or '')
+            guild = get_object_or_404(user.invites, guild_id=guild_id)
+            user.invites.remove(guild)
+            user.guilds.add(guild)
+    return JsonResponse({
+        'invites': list(user.invites.all().values_list('guild_id', flat=True))
+    }, status=201 if request.method == 'POST' else 200)
+
+@protected
+def me_guilds(request: HttpRequest, user):
+    if request.method == 'POST':
+        data=request_data(request)
+        name=data.get('name', None)
+        with transaction.atomic():
+            guild=Guild(name=name or '', dictator=user)
             guild.save()
             user.guilds.add(guild)
     return JsonResponse({
@@ -61,10 +74,10 @@ def me_guilds(request: HttpRequest, user):
 
 def me_class(request: HttpRequest, user):
     if request.method == 'POST':
-        data = request_data(request)
-        class_name = data.get('class', None)
+        data=request_data(request)
+        class_name=data.get('class', None)
         with transaction.atomic():
-            user.class_name = class_name
+            user.class_name=class_name
             user.save()
     return JsonResponse({
         'class': user.class_name
@@ -73,11 +86,11 @@ def me_class(request: HttpRequest, user):
 @protected
 def me_tasks(request: HttpRequest, user):
     if request.method == 'POST':
-        data = request_data(request)
-        title = data.get('title', None)
-        info = data.get('info', None)
-        minutes = data.get('time', None)
-        deadline = data.get('deadline', None)
+        data=request_data(request)
+        title=data.get('title', None)
+        info=data.get('info', None)
+        minutes=data.get('time', None)
+        deadline=data.get('deadline', None)
         with transaction.atomic():
             UserTask(title=title or '',
                       info=info or '',
@@ -94,11 +107,11 @@ def me_tasks(request: HttpRequest, user):
 @protect_guild
 def guild_tasks(request: HttpRequest, user, guild):
     if request.method == 'POST':
-        data = request_data(request)
-        title = data.get('title', None)
-        info = data.get('info', None)
-        minutes = data.get('time', None)
-        deadline = data.get('deadline', None)
+        data=request_data(request)
+        title=data.get('title', None)
+        info=data.get('info', None)
+        minutes=data.get('time', None)
+        deadline=data.get('deadline', None)
         with transaction.atomic():
             GuildTask(title=title or '',
                       info=info or '',
@@ -115,12 +128,25 @@ def guild_tasks(request: HttpRequest, user, guild):
 @protected
 def guild_info(request: HttpRequest, _user, guild_id):
     # TODO
-    return JsonResponse(json_guild(Guild.objects.get(guild_id=guild_id)))
+    return JsonResponse(json_guild(get_object_or_404(Guild, guild_id=guild_id)))
 
+@protect_guild
+def guild_invites(request, user, guild):
+    status = 200
+    if request.method == 'POST' and guild.dictator == user:
+        status = 201
+        data = request_data(request)
+        invited_user_id = data.get('id', None)
+        with transaction.atomic():
+            invited_user = get_object_or_404(User.objects.exclude(guilds=guild), user_id=invited_user_id)
+            invited_user.invites.add(guild)
+    return JsonResponse({
+        'invites': list(user.invites.all().values_list('guild_id', flat=True))
+    }, status=status)
 
 @protected
 def user_info(request: HttpRequest, _user, user_id):
-    return JsonResponse(json_user(User.objects.get(user_id=user_id)))
+    return JsonResponse(json_user(get_object_or_404(User, user_id=user_id)))
 
 
 def classes(request: HttpRequest):

@@ -20,12 +20,14 @@ from procrastinay.api import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/me/', views.me),
+    path('users/me/invites/', views.me_invites),
     path('users/me/tasks/', views.me_tasks),
     path('users/me/class/', views.me_class),
     path('users/me/guilds/', views.me_guilds),
     path('users/<uuid:user_id>/', views.user_info),
     path('guilds/<uuid:guild_id>/', views.guild_info),
     path('guilds/<uuid:guild_id>/tasks/', views.guild_tasks),
+    path('guilds/<uuid:guild_id>/invites/', views.guild_invites),
     path('login/', views.login),
     path('classes/', views.classes)
 ]
