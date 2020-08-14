@@ -3,6 +3,37 @@ from django.utils.text import slugify
 from functools import wraps
 from django.http import JsonResponse, HttpRequest, HttpResponse
 import json
+from contextlib import contextmanager
+from django.db import transaction
+from django.core.exceptions import SuspiciousOperation
+
+
+class Http400(Exception):
+    def __init__(self, inner):
+        self.inner = inner
+
+
+def catch_400(view_func):
+    @wraps(view_func)
+    def _catch_400(*args, **kwargs):
+        try:
+            return view_func(*args, **kwargs)
+        except Http400 as err:
+            return JsonResponse({'error': str(err.inner)}, status=400)
+    return _catch_400
+
+
+@contextmanager
+def transaction_or_400():
+    try:
+        with transaction.atomic():
+            yield
+    except Exception as e:
+        print(f'Error occured in transaction: {e}')
+        raise Http400(e)  # just using this exception type to return 400
+    finally:
+        pass
+
 
 def protect_guild(view_func):
     @wraps(view_func)
@@ -17,6 +48,7 @@ def protect_guild(view_func):
         return HttpResponse(status=403)
     return _protected
 
+
 def protected(view_func):
     @wraps(view_func)
     def _protected(request, *args, **kwargs):
@@ -24,6 +56,7 @@ def protected(view_func):
             return view_func(request, request.user, *args, **kwargs)
         return HttpResponse(status=403)
     return _protected
+
 
 def json_guild(guild: Guild):
     return {

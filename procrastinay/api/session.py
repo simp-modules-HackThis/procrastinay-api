@@ -20,3 +20,4 @@ class SessionMiddleware(MiddlewareMixin):
         session_key = json.loads(request.body or '{}').get('token', None)
         if session_key != None:
             request.COOKIES[settings.SESSION_COOKIE_NAME] = session_key
+
