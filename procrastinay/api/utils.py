@@ -73,6 +73,7 @@ def json_task(task: Task):
         'id': task.task_id,
         'title': task.title,
         'info': task.info,
+        'complete': task.completed,
         'time': task.minutes,
         'deadline': task.deadline,
     }

@@ -104,9 +104,11 @@ def me_tasks(request: HttpRequest, user):
     elif request.method == 'PATCH':
         data = request_data(request)
         task_id = data.get('id', None)
-        complete = data.get('complete', True)
+        complete = data.get('complete', 'true')
         with transaction_or_400():
-            UserTask.objects.get(task_id=task_id).completed = complete
+            task = UserTask.objects.get(task_id=task_id)
+            task.completed = complete.lower() == 'true'
+            task.save()
 
     return JsonResponse({
         'tasks': [json_task(task) for task in UserTask.objects.filter(owner=user).all()]
@@ -129,10 +131,18 @@ def guild_tasks(request: HttpRequest, user, guild):
                       deadline=deadline,
                       creator=user,
                       owner=guild).save()
+    elif request.method == 'PATCH':
+        data = request_data(request)
+        task_id = data.get('id', None)
+        complete = data.get('complete', 'true')
+        with transaction_or_400():
+            task = UserTask.objects.get(task_id=task_id)
+            task.completed = complete.lower() == 'true'
+            task.save()
 
     return JsonResponse({
         'tasks': [json_task(task) for task in GuildTask.objects.filter(owner=guild).all()]
-    }, 201 if request.method == 'POST' else 200)
+    }, 201 if request.method in ('POST', 'PATCH') else 200)
 
 
 @protected
