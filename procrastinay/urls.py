@@ -21,6 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/me/', views.me),
     path('users/me/tasks/', views.me_tasks),
+    path('users/me/class/', views.me_class),
     path('users/me/guilds/', views.me_guilds),
     path('users/<uuid:user_id>/', views.user_info),
     path('guilds/<uuid:guild_id>/', views.guild_info),

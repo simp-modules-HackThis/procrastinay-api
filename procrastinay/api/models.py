@@ -21,7 +21,7 @@ class Guild(models.Model):
 class User(AbstractUser):
     user_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     guilds = models.ManyToManyField(Guild)
-    class_name = models.CharField(max_length=50)
+    class_name = models.CharField(max_length=50, null=True, blank=True, default=None)
 
 
 class Task(models.Model):

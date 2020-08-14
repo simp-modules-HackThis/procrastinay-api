@@ -15,6 +15,9 @@ def login(request: HttpRequest):
     username = data.get('username', None)
     email = data.get('email', None)
     password = data.get('password', None)
+    class_name = data.get('class', None)
+    first_name = data.get('first_name', None)
+    last_name = data.get('last_name', None)
 
     # try to authenticate
     user = authenticate(request, username=username, password=password)
@@ -25,8 +28,9 @@ def login(request: HttpRequest):
         # email = None
         try:
             user = User.objects.create_user(
-                username, email, password, first_name=username)
+                username, email, password, first_name=first_name or '', last_name=last_name or '', class_name=class_name)
         except Exception as e:  # Error in create_user, usually a common username
+            print(f'error creating account: {e}')
             return JsonResponse({'error': 'An error occured while creating the account.'}, status=400)
     else:  # invalid user/pass
         return JsonResponse({'error': 'Invalid username or password.'}, status=400)
@@ -55,6 +59,16 @@ def me_guilds(request: HttpRequest, user):
         'guilds': [json_guild(guild) for guild in user.guilds.all()]
     }, status=201 if request.method == 'POST' else 200)
 
+def me_class(request: HttpRequest, user):
+    if request.method == 'POST':
+        data = request_data(request)
+        class_name = data.get('class', None)
+        with transaction.atomic():
+            user.class_name = class_name
+            user.save()
+    return JsonResponse({
+        'class': user.class_name
+    }, status=201 if request.method == 'POST' else 200)
 
 @protected
 def me_tasks(request: HttpRequest, user):
